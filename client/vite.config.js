@@ -6,17 +6,21 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,
+    // Bind to localhost only. Using host:true (0.0.0.0) previously made the
+    // browser try to open the HMR websocket against a non-loopback address
+    // that this machine couldn't reach, so the socket failed. With the React
+    // plugin, a failing HMR socket also means its Fast Refresh preamble never
+    // arrives, producing "@vitejs/plugin-react can't detect preamble".
+    host: "localhost",
     port: 5173,
     strictPort: true,
-    // HMR is disabled on purpose. The dev server itself accepts the HMR
-    // websocket fine, but this browser/profile can't reach it (a stale cached
-    // page / service worker keeps pointing at a dead socket token), which made
-    // React Fast Refresh throw "RefreshRuntime.getRefreshReg is not a
-    // function" and blocked the whole app from rendering. With HMR off there
-    // is no websocket to fail, so the page always renders. Edits require a
-    // manual browser refresh instead of live reload.
-    hmr: false,
+    // Keep HMR ON but pin it explicitly to loopback so the websocket URL the
+    // client uses always matches the server it can actually reach.
+    hmr: {
+      host: "localhost",
+      protocol: "ws",
+      port: 5173,
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3000",
