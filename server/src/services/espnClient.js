@@ -85,8 +85,15 @@ export async function getScoreboardForDate(league, ymd) {
 /**
  * Fallback used when a team's league schedule is empty (common at season
  * boundaries). Scans the league scoreboard backwards day-by-day for up to
- * `maxDays` and returns the most recent completed match involving the team.
- * Returns { eventId, date, shortName } or null.
+ * `maxDays` and returns the most recent match involving the team that has
+ * already kicked off (live or completed).
+ *
+ * ESPN's `status.type.state` is "pre" (not started), "in" (live), or "post"
+ * (finished). Within a given day we prefer a live match over a completed one;
+ * because we scan from today backwards, the first started match we find is
+ * also the most recent.
+ *
+ * Returns { eventId, date, shortName, live } or null.
  */
 export async function findLastMatchViaScoreboard(league, teamId, maxDays = 120) {
   const id = String(teamId);
@@ -102,20 +109,33 @@ export async function findLastMatchViaScoreboard(league, teamId, maxDays = 120) 
       continue; // transient day failure shouldn't abort the whole scan
     }
 
+    const started = [];
     for (const ev of events) {
       const comp = ev.competitions?.[0];
-      if (!comp?.status?.type?.completed) continue;
+      const state = comp?.status?.type?.state;
+      if (!state || state === "pre") continue; // not kicked off yet
       const involvesTeam = (comp.competitors || []).some(
         (c) => String(c.team?.id) === id
       );
       if (involvesTeam) {
-        return {
+        started.push({
           eventId: String(ev.id),
           date: ev.date,
           shortName: ev.shortName,
-        };
+          live: state === "in",
+        });
       }
     }
+
+    if (started.length === 0) continue;
+
+    // Prefer a live match on this day; otherwise the most recent by kickoff.
+    const live = started
+      .filter((m) => m.live)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (live.length > 0) return live[0];
+
+    return started.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   }
   return null;
 }

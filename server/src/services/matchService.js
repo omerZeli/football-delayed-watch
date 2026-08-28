@@ -32,20 +32,36 @@ export async function resolveTeam(name) {
 }
 
 /**
- * Find the most recent completed match for a team from its schedule.
- * Returns { eventId, date, shortName } or null.
+ * Find the most recent match that has already kicked off (live or completed)
+ * for a team, from its schedule.
+ *
+ * ESPN exposes `status.type.state`: "pre" (not started), "in" (live), or
+ * "post" (finished). We consider any match that is NOT "pre" as started.
+ * A live match ("in") is always preferred over a completed one, regardless
+ * of kickoff time; otherwise we fall back to the most recent by date.
+ *
+ * Returns { eventId, date, shortName, live } or null.
  */
-export function findLastCompletedMatch(events) {
-  const completed = events
-    .filter((ev) => ev.competitions?.[0]?.status?.type?.completed)
-    .map((ev) => ({
+export function findLastStartedMatch(events) {
+  const started = events
+    .map((ev) => ev.competitions?.[0] ? { ev, status: ev.competitions[0].status?.type } : null)
+    .filter((x) => x && x.status && x.status.state !== "pre")
+    .map(({ ev, status }) => ({
       eventId: String(ev.id),
       date: ev.date,
       shortName: ev.shortName,
-    }))
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+      live: status.state === "in",
+    }));
 
-  return completed[0] || null;
+  if (started.length === 0) return null;
+
+  // Prefer any live match; among ties, the most recent by kickoff.
+  const live = started
+    .filter((m) => m.live)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (live.length > 0) return live[0];
+
+  return started.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 }
 
 /**
@@ -61,7 +77,7 @@ export async function getLastMatchEventsByTeamName(teamName) {
   }
 
   const schedule = await getTeamSchedule(team.league, team.id);
-  let lastMatch = findLastCompletedMatch(schedule);
+  let lastMatch = findLastStartedMatch(schedule);
 
   // The league schedule only covers the current season and can be empty at
   // season boundaries. Fall back to scanning the league scoreboard backwards.
