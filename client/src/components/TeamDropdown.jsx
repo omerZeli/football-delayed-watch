@@ -29,7 +29,7 @@ export default function TeamDropdown({ id, value, options, onChange }) {
               fontWeight: 600,
               px: 2,
               py: 1,
-              "&:hover": { bgcolor: "rgba(232,255,58,0.14)" },
+              "&:hover": { bgcolor: "rgba(58,232,201,0.14)" },
               "&.Mui-selected, &.Mui-selected:hover": {
                 bgcolor: colors.accent,
                 color: "#10331f",
@@ -50,12 +50,12 @@ export default function TeamDropdown({ id, value, options, onChange }) {
         "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.line },
         "&:hover": { bgcolor: "rgba(0,0,0,0.38)" },
         "&:hover .MuiOutlinedInput-notchedOutline": {
-          borderColor: "rgba(232,255,58,0.5)",
+          borderColor: "rgba(58,232,201,0.5)",
         },
         "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
           borderColor: colors.accent,
           borderWidth: 1,
-          boxShadow: "0 0 0 3px rgba(232,255,58,0.18)",
+          boxShadow: "0 0 0 3px rgba(58,232,201,0.18)",
         },
         "& .MuiSelect-icon": { color: colors.accent, right: 14 },
       }}

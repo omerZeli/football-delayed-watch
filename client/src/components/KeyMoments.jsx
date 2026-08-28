@@ -45,7 +45,7 @@ export default function KeyMoments({ minutes }) {
                 transition: "transform .1s ease, background .2s ease",
                 "&:hover": {
                   transform: "translateY(-2px)",
-                  bgcolor: "rgba(232,255,58,0.18)",
+                  bgcolor: "rgba(58,232,201,0.18)",
                   borderColor: colors.accent,
                 },
               }}
