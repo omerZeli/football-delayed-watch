@@ -1,4 +1,5 @@
 import express from "express";
+import matchesRouter from "./routes/matches.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,9 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Match events API
+app.use("/api/matches", matchesRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
