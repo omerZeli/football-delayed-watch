@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Box,
+  ButtonBase,
   InputAdornment,
-  ListSubheader,
   MenuItem,
-  Select,
+  MenuList,
+  Popover,
   TextField,
   Typography,
 } from "@mui/material";
@@ -13,38 +14,181 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { colors } from "../theme.js";
 
 /**
- * Themed team picker. Uses MUI Select so the open menu is fully styled
- * (no native OS highlight). Pill-shaped trigger with the name on the left
- * and a centered accent chevron on the right. The open menu has a search
- * field pinned to the top that filters the team list as you type.
+ * Themed team picker.
+ *
+ * Built from a custom pill-shaped trigger plus a controlled MUI Popover
+ * rather than MUI <Select>. Select ignores anchorOrigin/transformOrigin and
+ * does not reliably forward Paper/MenuList styles, which made it impossible
+ * to (a) render an opaque menu, (b) anchor the menu directly under the
+ * field, and (c) style the scrollbar. A Popover gives full control over all
+ * three.
+ *
+ * Free text is supported: whatever you type can be used as the team, even
+ * if it isn't in the preset list, via the "Search …" action or by pressing
+ * Enter.
  */
 export default function TeamDropdown({ id, value, options, onChange }) {
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const anchorRef = useRef(null);
+
+  const query = search.trim();
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = query.toLowerCase();
     if (!q) return options;
     return options.filter((team) => team.toLowerCase().includes(q));
-  }, [options, search]);
+  }, [options, query]);
+
+  const exactMatch = useMemo(
+    () => options.some((team) => team.toLowerCase() === query.toLowerCase()),
+    [options, query]
+  );
+
+  const closeMenu = () => {
+    setOpen(false);
+    setSearch("");
+  };
+
+  const select = (team) => {
+    onChange(team);
+    closeMenu();
+  };
+
+  const commitFreeText = () => {
+    if (!query) return;
+    select(query);
+  };
 
   return (
-    <Select
-      id={id}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onClose={() => setSearch("")}
-      IconComponent={KeyboardArrowDownRoundedIcon}
-      MenuProps={{
-        autoFocus: false,
-        PaperProps: {
-          sx: {
-            mt: 1,
-            p: 0.5,
-            bgcolor: colors.menu,
-            border: `1px solid ${colors.line}`,
-            borderRadius: 3,
-            backdropFilter: "blur(10px)",
-            boxShadow: "0 12px 30px rgba(0,0,0,0.45)",
+    <>
+      <ButtonBase
+        id={id}
+        ref={anchorRef}
+        onClick={() => setOpen((o) => !o)}
+        focusRipple
+        sx={{
+          width: "100%",
+          justifyContent: "space-between",
+          gap: 1,
+          borderRadius: 999,
+          px: 2.4,
+          py: 1.4,
+          bgcolor: "rgba(0,0,0,0.28)",
+          color: "text.primary",
+          fontSize: "1.05rem",
+          fontWeight: 600,
+          textAlign: "left",
+          border: `1px solid ${open ? colors.accent : colors.line}`,
+          boxShadow: open ? "0 0 0 3px rgba(58,232,201,0.18)" : "none",
+          transition: "border-color .2s ease, background .2s ease, box-shadow .2s ease",
+          "&:hover": {
+            bgcolor: "rgba(0,0,0,0.38)",
+            borderColor: open ? colors.accent : "rgba(58,232,201,0.5)",
+          },
+        }}
+      >
+        <Box
+          component="span"
+          sx={{
+            flex: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            color: value ? "text.primary" : "text.secondary",
+          }}
+        >
+          {value || "Select a team"}
+        </Box>
+        <KeyboardArrowDownRoundedIcon
+          sx={{
+            color: colors.accent,
+            transition: "transform .2s ease",
+            transform: open ? "rotate(180deg)" : "none",
+          }}
+        />
+      </ButtonBase>
+
+      <Popover
+        open={open}
+        anchorEl={anchorRef.current}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{
+          paper: {
+            sx: {
+              // Match the trigger width.
+              width: anchorRef.current ? anchorRef.current.offsetWidth : "auto",
+              mt: 1,
+              p: 0.5,
+              // Solid, fully opaque background so nothing shows through.
+              bgcolor: colors.menu,
+              backgroundColor: colors.menu,
+              backgroundImage: "none",
+              border: `1px solid ${colors.line}`,
+              borderRadius: 3,
+              boxShadow: "0 12px 30px rgba(0,0,0,0.55)",
+              overflow: "hidden",
+            },
+          },
+        }}
+      >
+        {/* Pinned search field. */}
+        <Box sx={{ p: 0.5, pb: 1 }}>
+          <TextField
+            size="small"
+            autoFocus
+            fullWidth
+            placeholder="Search or type any team…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitFreeText();
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon sx={{ color: colors.accent, fontSize: 20 }} />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 999,
+                bgcolor: "rgba(0,0,0,0.28)",
+                color: "text.primary",
+                fontWeight: 600,
+                "& fieldset": { borderColor: colors.line },
+                "&:hover fieldset": { borderColor: "rgba(58,232,201,0.5)" },
+                "&.Mui-focused fieldset": { borderColor: colors.accent },
+              },
+            }}
+          />
+        </Box>
+
+        {/* Scrollable team list with a slim, themed scrollbar. */}
+        <MenuList
+          sx={{
+            p: 0,
+            maxHeight: 288,
+            overflowY: "auto",
+            scrollbarWidth: "thin",
+            scrollbarColor: `rgba(58,232,201,0.45) transparent`,
+            "&::-webkit-scrollbar": { width: 8 },
+            "&::-webkit-scrollbar-track": { background: "transparent" },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "rgba(58,232,201,0.45)",
+              borderRadius: 8,
+              border: "2px solid transparent",
+              backgroundClip: "content-box",
+            },
+            "&::-webkit-scrollbar-thumb:hover": {
+              backgroundColor: "rgba(58,232,201,0.7)",
+            },
             "& .MuiMenuItem-root": {
               borderRadius: 1.5,
               fontWeight: 600,
@@ -56,84 +200,39 @@ export default function TeamDropdown({ id, value, options, onChange }) {
                 color: "#10331f",
               },
             },
-          },
-        },
-      }}
-      sx={{
-        width: "100%",
-        borderRadius: 999,
-        bgcolor: "rgba(0,0,0,0.28)",
-        color: "text.primary",
-        fontSize: "1.05rem",
-        fontWeight: 600,
-        transition: "border-color .2s ease, background .2s ease, box-shadow .2s ease",
-        "& .MuiSelect-select": { py: 1.4, pl: 2.4 },
-        "& .MuiOutlinedInput-notchedOutline": { borderColor: colors.line },
-        "&:hover": { bgcolor: "rgba(0,0,0,0.38)" },
-        "&:hover .MuiOutlinedInput-notchedOutline": {
-          borderColor: "rgba(58,232,201,0.5)",
-        },
-        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-          borderColor: colors.accent,
-          borderWidth: 1,
-          boxShadow: "0 0 0 3px rgba(58,232,201,0.18)",
-        },
-        "& .MuiSelect-icon": { color: colors.accent, right: 14 },
-      }}
-    >
-      <ListSubheader
-        sx={{
-          p: 0.5,
-          bgcolor: "transparent",
-          lineHeight: 0,
-        }}
-      >
-        <TextField
-          size="small"
-          autoFocus
-          fullWidth
-          placeholder="Search teams…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            // Stop Select's built-in type-ahead from hijacking keystrokes
-            // (but let it close on Escape).
-            if (e.key !== "Escape") e.stopPropagation();
           }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchRoundedIcon sx={{ color: colors.accent, fontSize: 20 }} />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              borderRadius: 999,
-              bgcolor: "rgba(0,0,0,0.28)",
-              color: "text.primary",
-              fontWeight: 600,
-              "& fieldset": { borderColor: colors.line },
-              "&:hover fieldset": { borderColor: "rgba(58,232,201,0.5)" },
-              "&.Mui-focused fieldset": { borderColor: colors.accent },
-            },
-          }}
-        />
-      </ListSubheader>
+        >
+          {query && !exactMatch && (
+            <MenuItem onClick={commitFreeText}>Search “{query}”</MenuItem>
+          )}
 
-      {filtered.map((team) => (
-        <MenuItem key={team} value={team}>
-          {team}
-        </MenuItem>
-      ))}
+          {filtered.map((team) => (
+            <MenuItem
+              key={team}
+              selected={team === value}
+              onClick={() => select(team)}
+            >
+              {team}
+            </MenuItem>
+          ))}
 
-      {filtered.length === 0 && (
-        <Box sx={{ px: 2, py: 1.5 }}>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            No teams match “{search}”
-          </Typography>
-        </Box>
-      )}
-    </Select>
+          {filtered.length === 0 && !query && (
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                No teams available
+              </Typography>
+            </Box>
+          )}
+
+          {filtered.length === 0 && query && exactMatch && (
+            <Box sx={{ px: 2, py: 1.5 }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                No matching teams
+              </Typography>
+            </Box>
+          )}
+        </MenuList>
+      </Popover>
+    </>
   );
 }

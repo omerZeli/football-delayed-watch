@@ -10,7 +10,7 @@ export const colors = {
   accent: "#3ae8c9",
   accentDark: "#1ac7a8",
   card: "rgba(6, 40, 24, 0.72)",
-  menu: "rgba(6, 40, 24, 0.96)",
+  menu: "#062818",
   text: "#f2fef6",
   muted: "#a7c9b4",
   danger: "#ff5c5c",
