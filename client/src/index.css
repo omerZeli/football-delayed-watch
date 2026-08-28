@@ -190,6 +190,9 @@ body {
 .buttons {
   display: flex;
   gap: 0.6rem;
+  /* Nudge up so the buttons center on the dropdown pill rather than sitting
+     level with its bottom edge (the field's label adds height above). */
+  margin-bottom: 0.4rem;
 }
 
 .btn {

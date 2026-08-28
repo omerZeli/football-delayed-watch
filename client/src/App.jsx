@@ -102,6 +102,9 @@ export default function App() {
   const [result, setResult] = useState(() => loadStored(STORAGE_KEY));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Whether a search has been executed for the current selection. Refresh
+  // only shows once Send has run; changing the team hides it again.
+  const [searched, setSearched] = useState(false);
 
   // Persist selection and last result.
   useEffect(() => {
@@ -118,14 +121,25 @@ export default function App() {
     try {
       const data = await fetchMinutes(team);
       setResult(data);
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const handleSend = () => load(selectedTeam);
+  const handleSend = async () => {
+    const ok = await load(selectedTeam);
+    if (ok) setSearched(true);
+  };
+
+  // Changing the team hides Refresh until the next Send.
+  const handleSelectTeam = (team) => {
+    setSelectedTeam(team);
+    setSearched(false);
+  };
 
   // Refresh re-fetches using the team from the last successful result if
   // available, otherwise the current selection.
@@ -153,7 +167,7 @@ export default function App() {
             id="team"
             value={selectedTeam}
             options={TEAMS}
-            onChange={setSelectedTeam}
+            onChange={handleSelectTeam}
           />
         </div>
 
@@ -161,14 +175,16 @@ export default function App() {
           <button className="btn primary" onClick={handleSend} disabled={loading}>
             {loading ? "Loading…" : "Send"}
           </button>
-          <button
-            className="btn ghost"
-            onClick={handleRefresh}
-            disabled={loading || !result}
-            title="Re-fetch the latest data for the last team"
-          >
-            ↻ Refresh
-          </button>
+          {searched && (
+            <button
+              className="btn ghost"
+              onClick={handleRefresh}
+              disabled={loading}
+              title="Re-fetch the latest data for the last team"
+            >
+              ↻ Refresh
+            </button>
+          )}
         </div>
       </section>
 
