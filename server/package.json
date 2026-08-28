@@ -1,0 +1,14 @@
+{
+  "name": "football-delayed-watch-server",
+  "version": "1.0.0",
+  "description": "Backend server for football-delayed-watch",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
