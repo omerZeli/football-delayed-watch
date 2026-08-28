@@ -1,7 +1,9 @@
 /**
  * Transforms a raw ESPN match summary into a clean, client-friendly shape:
- * match metadata, score, the full minute-by-minute commentary, and team stats.
+ * match metadata, score, the match highlights, and team stats.
  */
+
+import { extractHighlights } from "./highlightsExtractor.js";
 
 // Which stats from the boxscore we surface alongside the commentary.
 const STAT_KEYS = [
@@ -75,14 +77,17 @@ function extractHeader(summary) {
 /**
  * @param {object} summary - raw ESPN match summary
  * @returns normalized match object with:
- *   - commentary: the complete minute-by-minute play-by-play, chronological
+ *   - highlights: the curated key moments (goals, subs, corners, cards, shots,
+ *     blocks/saves, misses, VAR, attempts, and offensive-half free kicks),
+ *     chronological. Derived by filtering the full commentary.
  *   - teamStats: aggregate stats (shots on target, corners, possession, etc.)
  */
 export function normalizeMatch(summary) {
   const header = extractHeader(summary);
+  const commentary = extractCommentary(summary.commentary);
   return {
     ...header,
-    commentary: extractCommentary(summary.commentary),
+    highlights: extractHighlights(commentary),
     teamStats: extractTeamStats(summary.boxscore?.teams),
   };
 }
