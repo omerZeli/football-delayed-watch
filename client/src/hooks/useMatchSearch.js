@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchMinutes } from "../lib/api.js";
 import {
   loadStored,
   saveStored,
+  loadWatched,
+  saveWatched,
   STORAGE_KEY,
   TEAM_KEY,
 } from "../lib/storage.js";
@@ -25,6 +27,16 @@ export function useMatchSearch() {
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
 
+  const eventId = result?.match?.eventId || null;
+
+  // Watched minutes for the currently loaded match, loaded from storage
+  // whenever the match changes so progress persists across refreshes.
+  const [watched, setWatched] = useState(() => loadWatched(eventId));
+
+  useEffect(() => {
+    setWatched(loadWatched(eventId));
+  }, [eventId]);
+
   useEffect(() => {
     saveStored(TEAM_KEY, selectedTeam);
   }, [selectedTeam]);
@@ -32,6 +44,25 @@ export function useMatchSearch() {
   useEffect(() => {
     if (result) saveStored(STORAGE_KEY, result);
   }, [result]);
+
+  const watchedSet = useMemo(() => new Set(watched), [watched]);
+
+  // Mark the clicked minute and every earlier minute (by position in the
+  // current chronological list) as watched, merging with anything already
+  // stored for this match. Persists immediately, keyed by eventId.
+  const markWatchedUpTo = useCallback(
+    (index) => {
+      if (!eventId) return;
+      const minutes = result?.minutes || [];
+      const upto = minutes.slice(0, index + 1);
+      setWatched((prev) => {
+        const next = Array.from(new Set([...prev, ...upto]));
+        saveWatched(eventId, next);
+        return next;
+      });
+    },
+    [eventId, result]
+  );
 
   const load = useCallback(async (team) => {
     setLoading(true);
@@ -72,6 +103,8 @@ export function useMatchSearch() {
     loading,
     error,
     searched,
+    watchedSet,
+    markWatchedUpTo,
     send,
     refresh,
     selectTeam,

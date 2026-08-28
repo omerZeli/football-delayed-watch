@@ -15,6 +15,8 @@ export default function App() {
     loading,
     error,
     searched,
+    watchedSet,
+    markWatchedUpTo,
     send,
     refresh,
     selectTeam,
@@ -47,7 +49,13 @@ export default function App() {
 
       {match && !error && <Scoreboard match={match} />}
 
-      {result && !error && <KeyMoments minutes={minutes} />}
+      {result && !error && (
+        <KeyMoments
+          minutes={minutes}
+          watched={watchedSet}
+          onMarkWatched={markWatchedUpTo}
+        />
+      )}
 
       {!result && !error && !loading && <EmptyHint />}
     </Box>

@@ -1,7 +1,13 @@
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import { colors } from "../theme.js";
 
-export default function KeyMoments({ minutes }) {
+/**
+ * Renders the highlight minutes as clickable chips. Clicking a chip marks it
+ * and every earlier minute (by position) as watched via `onMarkWatched(index)`.
+ * Watched minutes are shown dimmed/checked; `watched` is a Set of minute
+ * strings for the current match.
+ */
+export default function KeyMoments({ minutes, watched, onMarkWatched }) {
   return (
     <Box sx={{ mt: 3 }}>
       <Stack direction="row" alignItems="center" spacing={1.25}>
@@ -23,35 +29,51 @@ export default function KeyMoments({ minutes }) {
       </Stack>
 
       {minutes.length > 0 ? (
-        <Box
-          sx={{
-            mt: 2,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 0.75,
-          }}
-        >
-          {minutes.map((m, i) => (
-            <Chip
-              key={`${m}-${i}`}
-              label={m}
-              sx={{
-                px: 1,
-                fontWeight: 700,
-                fontVariantNumeric: "tabular-nums",
-                bgcolor: "rgba(255,255,255,0.08)",
-                border: `1px solid ${colors.line}`,
-                borderRadius: 999,
-                transition: "transform .1s ease, background .2s ease",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  bgcolor: "rgba(58,232,201,0.18)",
-                  borderColor: colors.accent,
-                },
-              }}
-            />
-          ))}
-        </Box>
+        <>
+          <Typography color="text.secondary" sx={{ mt: 1, fontSize: "0.85rem" }}>
+            Tap a minute to mark it and everything before it as watched.
+          </Typography>
+          <Box
+            sx={{
+              mt: 2,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 0.75,
+            }}
+          >
+            {minutes.map((m, i) => {
+              const isWatched = watched?.has(m);
+              return (
+                <Chip
+                  key={`${m}-${i}`}
+                  label={m}
+                  onClick={() => onMarkWatched?.(i)}
+                  sx={{
+                    px: 1,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontVariantNumeric: "tabular-nums",
+                    bgcolor: isWatched
+                      ? "rgba(58,232,201,0.22)"
+                      : "rgba(255,255,255,0.08)",
+                    color: isWatched ? colors.accent : "inherit",
+                    opacity: isWatched ? 0.85 : 1,
+                    border: `1px solid ${isWatched ? colors.accent : colors.line}`,
+                    borderRadius: 999,
+                    transition: "transform .1s ease, background .2s ease",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      bgcolor: isWatched
+                        ? "rgba(58,232,201,0.3)"
+                        : "rgba(58,232,201,0.18)",
+                      borderColor: colors.accent,
+                    },
+                  }}
+                />
+              );
+            })}
+          </Box>
+        </>
       ) : (
         <Typography color="text.secondary" sx={{ mt: 1 }}>
           No highlight minutes found for this match.
