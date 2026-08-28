@@ -1,11 +1,79 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // Ordered list of selectable teams. Add more names here; the dropdown
 // renders them in array order.
-const TEAMS = ["Real Madrid"];
+const TEAMS = ["Real Madrid", "Arsenal"];
 
 const STORAGE_KEY = "fdw:lastResult";
 const TEAM_KEY = "fdw:lastTeam";
+
+// Custom dropdown so the open menu is fully themed (native <select> menus
+// can't be styled and show the OS blue highlight).
+function TeamDropdown({ id, value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={`dropdown${open ? " open" : ""}`} ref={ref}>
+      <button
+        type="button"
+        id={id}
+        className="dropdown-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span>{value}</span>
+        <svg
+          className="chevron"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="dropdown-menu" role="listbox">
+          {options.map((opt) => (
+            <li
+              key={opt}
+              role="option"
+              aria-selected={opt === value}
+              className={`dropdown-option${opt === value ? " selected" : ""}`}
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+              }}
+            >
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function loadStored(key) {
   try {
@@ -81,17 +149,12 @@ export default function App() {
       <section className="controls">
         <div className="field">
           <label htmlFor="team">Team</label>
-          <select
+          <TeamDropdown
             id="team"
             value={selectedTeam}
-            onChange={(e) => setSelectedTeam(e.target.value)}
-          >
-            {TEAMS.map((team) => (
-              <option key={team} value={team}>
-                {team}
-              </option>
-            ))}
-          </select>
+            options={TEAMS}
+            onChange={setSelectedTeam}
+          />
         </div>
 
         <div className="buttons">
@@ -115,11 +178,9 @@ export default function App() {
         <section className="scoreboard">
           <div className="team home">
             <span className="team-name">{match.home?.team || "Home"}</span>
-            <span className="score">{match.home?.score ?? "–"}</span>
           </div>
           <span className="vs">vs</span>
           <div className="team away">
-            <span className="score">{match.away?.score ?? "–"}</span>
             <span className="team-name">{match.away?.team || "Away"}</span>
           </div>
         </section>
