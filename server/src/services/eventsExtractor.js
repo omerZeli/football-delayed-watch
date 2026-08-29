@@ -82,12 +82,12 @@ function extractHeader(summary) {
  *     chronological. Derived by filtering the full commentary.
  *   - teamStats: aggregate stats (shots on target, corners, possession, etc.)
  */
-export function normalizeMatch(summary) {
+export function normalizeMatch(summary, { essential = false } = {}) {
   const header = extractHeader(summary);
   const commentary = extractCommentary(summary.commentary);
   return {
     ...header,
-    highlights: extractHighlights(commentary),
+    highlights: extractHighlights(commentary, { essential }),
     teamStats: extractTeamStats(summary.boxscore?.teams),
   };
 }

@@ -1,6 +1,8 @@
 // Small localStorage helpers with JSON (de)serialization and safe fallback.
 export const STORAGE_KEY = "fdw:lastResult";
 export const TEAM_KEY = "fdw:lastTeam";
+// Whether the user opted into essential-only highlights (boolean).
+export const ESSENTIAL_KEY = "fdw:essentialOnly";
 // Watched minutes, keyed per match: { [eventId]: ["1'", "15'", ...] }.
 export const WATCHED_KEY = "fdw:watched";
 

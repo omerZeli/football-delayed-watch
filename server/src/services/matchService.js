@@ -67,8 +67,10 @@ export function findLastStartedMatch(events) {
 /**
  * Full pipeline: team name -> resolved team -> last completed match -> normalized events.
  * Throws typed errors (with .code) so the route can map them to HTTP status codes.
+ * Pass { essential: true } to curate highlights down to the decisive moments
+ * only (goals, shots on target/woodwork, red cards, VAR).
  */
-export async function getLastMatchEventsByTeamName(teamName) {
+export async function getLastMatchEventsByTeamName(teamName, { essential = false } = {}) {
   const team = await resolveTeam(teamName);
   if (!team) {
     const err = new Error(`No soccer team found matching "${teamName}".`);
@@ -94,7 +96,7 @@ export async function getLastMatchEventsByTeamName(teamName) {
   }
 
   const summary = await getMatchSummary(team.league, lastMatch.eventId);
-  const match = normalizeMatch(summary);
+  const match = normalizeMatch(summary, { essential });
 
   return {
     query: teamName,

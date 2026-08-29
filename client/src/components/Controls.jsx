@@ -1,5 +1,15 @@
-import { Box, Button, InputLabel, Paper, Stack } from "@mui/material";
+import {
+  Box,
+  Button,
+  InputLabel,
+  Paper,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import FormatListBulletedRoundedIcon from "@mui/icons-material/FormatListBulletedRounded";
 import TeamDropdown from "./TeamDropdown.jsx";
 import { colors } from "../theme.js";
 
@@ -8,9 +18,11 @@ export default function Controls({
   teams,
   loading,
   searched,
+  essentialOnly,
   onSelectTeam,
   onSend,
   onRefresh,
+  onToggleEssential,
 }) {
   return (
     <Paper
@@ -102,6 +114,65 @@ export default function Controls({
           </Button>
         )}
         </Stack>
+      </Box>
+
+      {/* Highlight-depth toggle: full timeline vs. only the decisive moments
+          (goals, shots on target/woodwork, red cards, VAR). Full-width so it
+          sits on its own row beneath the team/buttons row. */}
+      <Box
+        sx={{
+          flex: "1 1 100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 0.75,
+        }}
+      >
+        <InputLabel
+          sx={{
+            fontSize: "0.8rem",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: "text.secondary",
+          }}
+        >
+          Highlights
+        </InputLabel>
+        <ToggleButtonGroup
+          exclusive
+          value={essentialOnly ? "essential" : "all"}
+          onChange={(_e, val) => {
+            // Ignore clicks on the already-selected button (val === null).
+            if (val === null) return;
+            onToggleEssential?.(val === "essential");
+          }}
+          disabled={loading}
+          aria-label="Highlight depth"
+          sx={{
+            "& .MuiToggleButton-root": {
+              flex: 1,
+              gap: 0.75,
+              textTransform: "none",
+              fontWeight: 600,
+              color: "text.secondary",
+              borderColor: colors.line,
+              py: 1,
+              "&.Mui-selected": {
+                color: "#10331f",
+                bgcolor: colors.accent,
+                "&:hover": { bgcolor: colors.accentDark },
+              },
+            },
+          }}
+        >
+          <ToggleButton value="all" aria-label="All highlights">
+            <FormatListBulletedRoundedIcon fontSize="small" />
+            All highlights
+          </ToggleButton>
+          <ToggleButton value="essential" aria-label="Essential highlights only">
+            <StarRoundedIcon fontSize="small" />
+            Essential only
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Box>
     </Paper>
   );

@@ -25,10 +25,19 @@ export function shiftMinuteBackByOne(minute) {
   return `${base}${plain[2]}`;
 }
 
-export async function fetchMinutes(team) {
-  const res = await fetch(
-    `/api/matches/last/minutes?team=${encodeURIComponent(team)}`
-  );
+/**
+ * Fetch the highlight minutes for a team's most recent match.
+ * @param {string} team
+ * @param {object} [options]
+ * @param {boolean} [options.essential=false] when true, hit the curated
+ *   endpoint that returns only the most decisive moments (goals, shots on
+ *   target/woodwork, red cards, VAR).
+ */
+export async function fetchMinutes(team, { essential = false } = {}) {
+  const path = essential
+    ? "/api/matches/last/minutes/essential"
+    : "/api/matches/last/minutes";
+  const res = await fetch(`${path}?team=${encodeURIComponent(team)}`);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(body.error || `Request failed (${res.status})`);

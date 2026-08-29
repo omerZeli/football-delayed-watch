@@ -4,8 +4,16 @@
  * were derived by studying real ESPN commentary text across several matches.
  *
  * Categories requested:
- *   goals, subs, corners, cards, shots, blocks/saves, misses (missing),
- *   var, attempts, and free kicks in the offensive (attacking) half.
+ *   goals, subs, corners, cards (yellow / red), shots, blocks/saves,
+ *   misses (missing), var, attempts, and free kicks in the offensive
+ *   (attacking) half.
+ *
+ * Two levels of curation are supported:
+ *   - "full"      : every category above (the default behavior).
+ *   - "essential" : only the most decisive moments — goals, shots on target
+ *                   (saved on goal) or off the woodwork, red cards / sendings-
+ *                   off, and VAR decisions. Off-target/blocked shots, yellow
+ *                   cards, substitutions, corners and free kicks are dropped.
  *
  * ESPN commentary is free text with very consistent leading phrases, e.g.:
  *   "Goal! Fulham 1, Chelsea 2. Morgan Rogers (Chelsea) right footed shot..."
@@ -45,8 +53,11 @@ const HIGHLIGHT_RULES = [
   // we never drop a genuine shot/header/attempt on goal).
   { type: "shot", test: /\b(footed shot|header from|shot from)\b/i },
 
-  // Cards.
-  { type: "card", test: /is shown the (yellow|red|second yellow) card/i },
+  // Cards. Red / second-yellow (i.e. a sending-off) is split out from a plain
+  // yellow so callers can treat a dismissal as an "essential" highlight while
+  // an ordinary booking is not. Checked before the yellow rule.
+  { type: "redCard", test: /is shown the (red|second yellow) card/i },
+  { type: "card", test: /is shown the yellow card/i },
 
   // Substitutions.
   { type: "substitution", test: /^Substitution\b/i },
@@ -83,18 +94,35 @@ export function classifyHighlight(text) {
 }
 
 /**
+ * The subset of highlight types considered "essential" — the moments most
+ * worth watching. A shot on target here means one saved on goal (`save`);
+ * `woodwork` covers efforts off the bar/post. Blocked and off-target shots,
+ * yellow cards, subs, corners and free kicks are deliberately excluded.
+ */
+export const ESSENTIAL_HIGHLIGHT_TYPES = new Set([
+  "goal",
+  "save",
+  "woodwork",
+  "redCard",
+  "var",
+]);
+
+/**
  * Reduce full commentary to highlights only, preserving chronological order.
  * @param {Array<{sequence:number|null, minute:string|null, text:string}>} commentary
  *   already-normalized, chronological commentary (see eventsExtractor).
+ * @param {object} [options]
+ * @param {boolean} [options.essential=false] when true, keep only the
+ *   essential highlight types (see ESSENTIAL_HIGHLIGHT_TYPES).
  * @returns {Array<{sequence, minute, text, type}>} highlight entries with a type tag.
  */
-export function extractHighlights(commentary = []) {
+export function extractHighlights(commentary = [], { essential = false } = {}) {
   const highlights = [];
   for (const c of commentary) {
     const type = classifyHighlight(c.text);
-    if (type) {
-      highlights.push({ ...c, type });
-    }
+    if (!type) continue;
+    if (essential && !ESSENTIAL_HIGHLIGHT_TYPES.has(type)) continue;
+    highlights.push({ ...c, type });
   }
   return highlights;
 }

@@ -15,11 +15,13 @@ export default function App() {
     loading,
     error,
     searched,
+    essentialOnly,
     watchedSet,
     markWatchedUpTo,
     send,
     refresh,
     selectTeam,
+    toggleEssential,
   } = useMatchSearch();
 
   const minutes = result?.minutes || [];
@@ -36,9 +38,11 @@ export default function App() {
         teams={TEAMS}
         loading={loading}
         searched={searched}
+        essentialOnly={essentialOnly}
         onSelectTeam={selectTeam}
         onSend={send}
         onRefresh={refresh}
+        onToggleEssential={toggleEssential}
       />
 
       {error && (

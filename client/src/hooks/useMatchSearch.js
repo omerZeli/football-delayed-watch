@@ -7,6 +7,7 @@ import {
   saveWatched,
   STORAGE_KEY,
   TEAM_KEY,
+  ESSENTIAL_KEY,
 } from "../lib/storage.js";
 import { TEAMS } from "../constants.js";
 
@@ -26,6 +27,9 @@ export function useMatchSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
+  const [essentialOnly, setEssentialOnly] = useState(
+    () => loadStored(ESSENTIAL_KEY) === true
+  );
 
   const eventId = result?.match?.eventId || null;
 
@@ -40,6 +44,10 @@ export function useMatchSearch() {
   useEffect(() => {
     saveStored(TEAM_KEY, selectedTeam);
   }, [selectedTeam]);
+
+  useEffect(() => {
+    saveStored(ESSENTIAL_KEY, essentialOnly);
+  }, [essentialOnly]);
 
   useEffect(() => {
     if (result) saveStored(STORAGE_KEY, result);
@@ -64,11 +72,11 @@ export function useMatchSearch() {
     [eventId, result]
   );
 
-  const load = useCallback(async (team) => {
+  const load = useCallback(async (team, essential) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMinutes(team);
+      const data = await fetchMinutes(team, { essential });
       setResult(data);
       return true;
     } catch (err) {
@@ -80,15 +88,15 @@ export function useMatchSearch() {
   }, []);
 
   const send = useCallback(async () => {
-    const ok = await load(selectedTeam);
+    const ok = await load(selectedTeam, essentialOnly);
     if (ok) setSearched(true);
-  }, [load, selectedTeam]);
+  }, [load, selectedTeam, essentialOnly]);
 
   // Re-fetch using the team from the last successful result if available,
   // otherwise the current selection.
   const refresh = useCallback(
-    () => load(result?.query || selectedTeam),
-    [load, result, selectedTeam]
+    () => load(result?.query || selectedTeam, essentialOnly),
+    [load, result, selectedTeam, essentialOnly]
   );
 
   // Changing the team hides Refresh until the next successful Send.
@@ -97,16 +105,28 @@ export function useMatchSearch() {
     setSearched(false);
   }, []);
 
+  // Flip the essential-only mode. If a search has already run, immediately
+  // re-fetch with the new mode so the visible minutes update in place.
+  const toggleEssential = useCallback(
+    (next) => {
+      setEssentialOnly(next);
+      if (searched) load(result?.query || selectedTeam, next);
+    },
+    [searched, load, result, selectedTeam]
+  );
+
   return {
     selectedTeam,
     result,
     loading,
     error,
     searched,
+    essentialOnly,
     watchedSet,
     markWatchedUpTo,
     send,
     refresh,
     selectTeam,
+    toggleEssential,
   };
 }
