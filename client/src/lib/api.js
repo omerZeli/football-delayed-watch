@@ -11,8 +11,12 @@ export function shiftMinuteBackByOne(minute) {
   if (minute == null) return minute;
   const str = String(minute);
 
-  // Stoppage time, e.g. "45+2" -> "45+1" (reduce the added minutes).
-  const stoppage = str.match(/^(\d+)\+(\d+)(.*)$/);
+  // Stoppage time: reduce only the added minutes and never touch the base.
+  // ESPN emits several shapes for the base part, with or without trailing
+  // formatting before the "+": "45+2", "45'+2", "45'+2'". We capture the
+  // whole base (up to the last "+" that precedes the added number) verbatim
+  // and only decrement the added number.
+  const stoppage = str.match(/^(\d+\D*)\+(\d+)(.*)$/);
   if (stoppage) {
     const added = Math.max(0, parseInt(stoppage[2], 10) - 1);
     return `${stoppage[1]}+${added}${stoppage[3]}`;
