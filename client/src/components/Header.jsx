@@ -13,8 +13,6 @@ export default function Header() {
         sx={{
           fontSize: "2.6rem",
           filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.4))",
-          animation: "spin 8s linear infinite",
-          "@keyframes spin": { to: { transform: "rotate(360deg)" } },
         }}
       >
         ⚽
