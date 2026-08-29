@@ -31,6 +31,9 @@ export function useMatchSearch() {
   const [essentialOnly, setEssentialOnly] = useState(
     () => loadStored(ESSENTIAL_KEY) === true
   );
+  // Whether extra-time minutes (base minute > 90) are shown. Defaults to
+  // hidden and resets to hidden on every Send.
+  const [showExtraTime, setShowExtraTime] = useState(false);
 
   const eventId = result?.match?.eventId || null;
 
@@ -99,6 +102,7 @@ export function useMatchSearch() {
   }, []);
 
   const send = useCallback(async () => {
+    setShowExtraTime(false);
     const ok = await load(selectedTeam, essentialOnly);
     if (ok) setSearched(true);
   }, [load, selectedTeam, essentialOnly]);
@@ -127,6 +131,8 @@ export function useMatchSearch() {
     error,
     essentialOnly,
     watchedSet,
+    showExtraTime,
+    toggleExtraTime: () => setShowExtraTime((v) => !v),
     markWatchedUpTo,
     send,
     selectTeam,

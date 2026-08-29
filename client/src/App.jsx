@@ -16,6 +16,8 @@ export default function App() {
     error,
     essentialOnly,
     watchedSet,
+    showExtraTime,
+    toggleExtraTime,
     markWatchedUpTo,
     send,
     selectTeam,
@@ -54,6 +56,8 @@ export default function App() {
           minutes={minutes}
           watched={watchedSet}
           onMarkWatched={markWatchedUpTo}
+          showExtraTime={showExtraTime}
+          onToggleExtraTime={toggleExtraTime}
         />
       )}
 
