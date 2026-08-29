@@ -6,20 +6,63 @@
 const SITE_API = "https://site.api.espn.com/apis/site/v2/sports/soccer";
 const SEARCH_API = "https://site.web.api.espn.com/apis/common/v3/search";
 
+// ESPN's WAF fingerprints requests and blocks anything that doesn't look like a
+// real browser hitting espn.com. A bare User-Agent is enough from a residential
+// IP, but from a datacenter (e.g. Render) ESPN is far stricter and 403s unless
+// the request also carries the headers a browser sends: Origin/Referer of
+// espn.com, Accept-Language, and the modern Client Hints / Fetch Metadata
+// headers. We mirror those here.
 const DEFAULT_HEADERS = {
-  // ESPN's WAF rejects non-browser-like User-Agents (custom UAs return 403),
-  // so we present a standard browser UA string.
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  Accept: "application/json",
+  Accept: "application/json, text/plain, */*",
+  "Accept-Language": "en-US,en;q=0.9",
+  Origin: "https://www.espn.com",
+  Referer: "https://www.espn.com/",
+  "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-site",
 };
 
-async function getJson(url) {
-  const res = await fetch(url, { headers: DEFAULT_HEADERS });
-  if (!res.ok) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Fetch JSON from ESPN with retry/backoff. ESPN's WAF blocks (403) and rate
+ * limits (429) are often intermittent from datacenter IPs, so a couple of
+ * retries with a short backoff meaningfully improve success. Other statuses
+ * (e.g. 404) fail immediately since retrying won't help.
+ */
+async function getJson(url, { retries = 3, backoffMs = 400 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let res;
+    try {
+      res = await fetch(url, { headers: DEFAULT_HEADERS });
+    } catch (err) {
+      // Network-level failure (DNS, reset, timeout): retry.
+      lastErr = err;
+      if (attempt < retries) {
+        await sleep(backoffMs * (attempt + 1));
+        continue;
+      }
+      throw new Error(`ESPN request failed (network error) for ${url}: ${err.message}`);
+    }
+
+    if (res.ok) return res.json();
+
+    // Retry only on blocks / rate limits / transient upstream errors.
+    if ([403, 429, 500, 502, 503].includes(res.status) && attempt < retries) {
+      lastErr = new Error(`ESPN request failed (${res.status}) for ${url}`);
+      await sleep(backoffMs * (attempt + 1));
+      continue;
+    }
+
     throw new Error(`ESPN request failed (${res.status}) for ${url}`);
   }
-  return res.json();
+  throw lastErr;
 }
 
 /**
