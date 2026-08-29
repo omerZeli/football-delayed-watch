@@ -1,0 +1,16 @@
+{
+  "name": "football-delayed-watch",
+  "version": "1.0.0",
+  "description": "Find when to watch the key moments of a team's last match. Express API + React (Vite) client, deployed as a single service.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run install:all && npm run build:client",
+    "start": "npm --prefix server start"
+  }
+}

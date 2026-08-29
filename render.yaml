@@ -1,0 +1,22 @@
+# Render Blueprint for football-delayed-watch
+# https://render.com/docs/blueprint-spec
+#
+# Deploys the whole app as ONE web service: the Express server serves the API
+# under /api and the built React (Vite) client as static files, so both share
+# a single origin. No API keys are required (the backend calls ESPN's public
+# endpoints).
+services:
+  - type: web
+    name: football-delayed-watch
+    runtime: node
+    plan: free
+    # Install both workspaces and build the client into client/dist.
+    buildCommand: npm run build
+    # Start the Express server, which also serves client/dist.
+    startCommand: npm start
+    # Render sets PORT automatically; the server reads process.env.PORT.
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
