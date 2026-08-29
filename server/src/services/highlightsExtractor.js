@@ -4,9 +4,9 @@
  * were derived by studying real ESPN commentary text across several matches.
  *
  * Categories requested:
- *   goals, subs, corners, cards (yellow / red), shots, blocks/saves,
- *   misses (missing), var, attempts, and free kicks in the offensive
- *   (attacking) half.
+ *   goals, penalties awarded, subs, corners, cards (yellow / red), shots,
+ *   blocks/saves, misses (missing), var, attempts, and free kicks in the
+ *   offensive (attacking) half.
  *
  * Two levels of curation are supported:
  *   - "full"      : every category above (the default behavior).
@@ -20,6 +20,7 @@
  *   "Attempt saved. Cole Palmer (Chelsea) right footed shot ... is saved..."
  *   "Attempt blocked. Reece James (Chelsea) ... is blocked."
  *   "Attempt missed. João Pedro (Chelsea) ... misses to the right."
+ *   "Penalty conceded by Álvaro Ampuero (Cusco) with a handball in the penalty area."
  *   "Corner, Chelsea. Conceded by Antonee Robinson."
  *   "Substitution, Chelsea. Enzo Fernández replaces Roméo Lavia."
  *   "Levi Colwill (Chelsea) is shown the yellow card for a bad foul."
@@ -40,6 +41,17 @@ const HIGHLIGHT_RULES = [
   // Goals (including own goals and penalties). Checked first so goal lines
   // aren't swallowed by the generic "shot" rule.
   { type: "goal", test: /^Goal!|^Own Goal|Penalty (scored|missed)/i },
+
+  // Penalty awarded (given). ESPN phrases this as, e.g.:
+  //   "Penalty conceded by X (Team) with a handball in the penalty area."
+  //   "Penalty Team. Y (Team) draws a foul in the penalty area."
+  //   "Y (Team) wins a penalty ..."
+  // Checked after the goal rule so a scored/missed penalty stays a "goal",
+  // and worded to avoid matching those (which don't say "conceded/draws/wins").
+  {
+    type: "penalty",
+    test: /^Penalty conceded by\b|^Penalty [A-Z].*\bdraws a foul in the penalty area\b|\bwins a penalty\b/i,
+  },
 
   // Woodwork counts as a notable miss/attempt: "hits the bar/left post/right post".
   { type: "woodwork", test: /\bhits the (bar|crossbar|left post|right post|post)\b/i },
@@ -101,6 +113,7 @@ export function classifyHighlight(text) {
  */
 export const ESSENTIAL_HIGHLIGHT_TYPES = new Set([
   "goal",
+  "penalty",
   "save",
   "woodwork",
   "redCard",
