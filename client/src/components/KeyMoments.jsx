@@ -2,12 +2,14 @@ import { Box, Chip, Stack, Typography } from "@mui/material";
 import { colors } from "../theme.js";
 
 /**
- * Renders the highlight minutes as clickable chips. Clicking a chip marks it
- * and every earlier minute (by position) as watched via `onMarkWatched(index)`.
- * Watched minutes are shown dimmed/checked; `watched` is a Set of minute
- * strings for the current match.
+ * Renders the highlight minutes as clickable chips. Clicking an unwatched chip
+ * marks it and every earlier minute (by position) as watched; clicking an
+ * already-watched chip unmarks only that single minute, via
+ * `onMarkWatched(index)`. Watched minutes are shown dimmed/checked; `watched`
+ * is a Set of minute strings for the current match.
  */
 export default function KeyMoments({ minutes, watched, onMarkWatched }) {
+  const watchedCount = minutes.filter((m) => watched?.has(m)).length;
   return (
     <Box sx={{ mt: 3 }}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
@@ -24,7 +26,7 @@ export default function KeyMoments({ minutes, watched, onMarkWatched }) {
             borderRadius: 999,
           }}
         >
-          {minutes.length}
+          {watchedCount}/{minutes.length}
         </Box>
       </Stack>
 

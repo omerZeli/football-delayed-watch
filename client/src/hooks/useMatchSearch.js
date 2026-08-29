@@ -56,16 +56,26 @@ export function useMatchSearch() {
 
   const watchedSet = useMemo(() => new Set(watched), [watched]);
 
-  // Mark the clicked minute and every earlier minute (by position in the
-  // current chronological list) as watched, merging with anything already
-  // stored for this match. Persists immediately, keyed by eventId.
+  // Toggle watched state for the clicked minute. If it isn't watched yet, mark
+  // it and every earlier minute (by position in the current chronological list)
+  // as watched. If it's already watched, unmark only that single minute.
+  // Persists immediately, keyed by eventId.
   const markWatchedUpTo = useCallback(
     (index) => {
       if (!eventId) return;
       const minutes = result?.minutes || [];
-      const upto = minutes.slice(0, index + 1);
+      const clicked = minutes[index];
+      if (clicked == null) return;
       setWatched((prev) => {
-        const next = Array.from(new Set([...prev, ...upto]));
+        let next;
+        if (prev.includes(clicked)) {
+          // Already watched: unmark just this one.
+          next = prev.filter((m) => m !== clicked);
+        } else {
+          // Not watched: mark it and everything before it.
+          const upto = minutes.slice(0, index + 1);
+          next = Array.from(new Set([...prev, ...upto]));
+        }
         saveWatched(eventId, next);
         return next;
       });
