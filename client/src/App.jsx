@@ -14,12 +14,10 @@ export default function App() {
     result,
     loading,
     error,
-    searched,
     essentialOnly,
     watchedSet,
     markWatchedUpTo,
     send,
-    refresh,
     selectTeam,
     toggleEssential,
   } = useMatchSearch();
@@ -37,11 +35,9 @@ export default function App() {
         selectedTeam={selectedTeam}
         teams={TEAMS}
         loading={loading}
-        searched={searched}
         essentialOnly={essentialOnly}
         onSelectTeam={selectTeam}
         onSend={send}
-        onRefresh={refresh}
         onToggleEssential={toggleEssential}
       />
 

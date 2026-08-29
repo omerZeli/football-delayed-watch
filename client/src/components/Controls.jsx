@@ -7,7 +7,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@mui/material";
-import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import FormatListBulletedRoundedIcon from "@mui/icons-material/FormatListBulletedRounded";
 import TeamDropdown from "./TeamDropdown.jsx";
@@ -17,11 +16,9 @@ export default function Controls({
   selectedTeam,
   teams,
   loading,
-  searched,
   essentialOnly,
   onSelectTeam,
   onSend,
-  onRefresh,
   onToggleEssential,
 }) {
   return (
@@ -89,30 +86,6 @@ export default function Controls({
         >
           {loading ? "Loading…" : "Send"}
         </Button>
-        {searched && (
-          <Button
-            variant="outlined"
-            onClick={onRefresh}
-            disabled={loading}
-            startIcon={<RefreshRoundedIcon />}
-            title="Re-fetch the latest data for the last team"
-            sx={{
-              borderRadius: 2.5,
-              fontWeight: 600,
-              px: 2.6,
-              py: 1.2,
-              color: "text.primary",
-              borderColor: colors.line,
-              bgcolor: "rgba(255,255,255,0.08)",
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.16)",
-                borderColor: colors.line,
-              },
-            }}
-          >
-            Refresh
-          </Button>
-        )}
         </Stack>
       </Box>
 

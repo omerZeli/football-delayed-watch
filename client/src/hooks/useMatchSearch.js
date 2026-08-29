@@ -16,8 +16,9 @@ import { TEAMS } from "../constants.js";
  * - selected team (persisted)
  * - last result (persisted)
  * - loading / error
- * - `searched`: whether a search ran for the current selection. Refresh is
- *   only meaningful once Send has succeeded; changing the team resets it.
+ * - `searched`: whether a search ran for the current selection. Used to decide
+ *   whether toggling essential-only should auto-refetch; changing the team
+ *   resets it until the next successful Send.
  */
 export function useMatchSearch() {
   const [selectedTeam, setSelectedTeam] = useState(
@@ -92,14 +93,8 @@ export function useMatchSearch() {
     if (ok) setSearched(true);
   }, [load, selectedTeam, essentialOnly]);
 
-  // Re-fetch using the team from the last successful result if available,
-  // otherwise the current selection.
-  const refresh = useCallback(
-    () => load(result?.query || selectedTeam, essentialOnly),
-    [load, result, selectedTeam, essentialOnly]
-  );
-
-  // Changing the team hides Refresh until the next successful Send.
+  // Changing the team clears the "already searched" flag so the essential-only
+  // toggle won't auto-refetch until the next successful Send.
   const selectTeam = useCallback((team) => {
     setSelectedTeam(team);
     setSearched(false);
@@ -120,12 +115,10 @@ export function useMatchSearch() {
     result,
     loading,
     error,
-    searched,
     essentialOnly,
     watchedSet,
     markWatchedUpTo,
     send,
-    refresh,
     selectTeam,
     toggleEssential,
   };
