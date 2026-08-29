@@ -43,25 +43,23 @@ export default function Scoreboard({ match }) {
       <Box
         sx={{
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "center",
           gap: { xs: 1, sm: 2.5 },
           width: "100%",
         }}
       >
-        <Box sx={{ flex: 1, display: "flex", justifyContent: "flex-end", minWidth: 0 }}>
-          <Typography
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: "1rem", sm: "1.15rem" },
-              lineHeight: 1.2,
-              textAlign: "right",
-              textWrap: "balance",
-            }}
-          >
-            {match.home?.team || "Home"}
-          </Typography>
-        </Box>
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: "1rem", sm: "1.15rem" },
+            lineHeight: 1.2,
+            textAlign: "center",
+          }}
+        >
+          {match.home?.team || "Home"}
+        </Typography>
         <Typography
           component="span"
           color="text.secondary"
@@ -74,19 +72,16 @@ export default function Scoreboard({ match }) {
         >
           vs
         </Typography>
-        <Box sx={{ flex: 1, display: "flex", justifyContent: "flex-start", minWidth: 0 }}>
-          <Typography
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: "1rem", sm: "1.15rem" },
-              lineHeight: 1.2,
-              textAlign: "left",
-              textWrap: "balance",
-            }}
-          >
-            {match.away?.team || "Away"}
-          </Typography>
-        </Box>
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: "1rem", sm: "1.15rem" },
+            lineHeight: 1.2,
+            textAlign: "center",
+          }}
+        >
+          {match.away?.team || "Away"}
+        </Typography>
       </Box>
 
       {kickoff && (

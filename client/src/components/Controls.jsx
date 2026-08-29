@@ -36,7 +36,7 @@ export default function Controls({
         backdropFilter: "blur(8px)",
       }}
     >
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: "1 1 220px" }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: "1 1 140px" }}>
         <InputLabel
           htmlFor="team"
           sx={{
