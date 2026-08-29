@@ -74,8 +74,7 @@ export default function Controls({
         <Stack
           direction="row"
           spacing={0.75}
-          alignItems="center"
-          sx={{ flex: 1 }}
+          sx={{ alignItems: "center", flex: 1 }}
         >
         <Button
           variant="contained"

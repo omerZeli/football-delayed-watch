@@ -10,7 +10,7 @@ import { colors } from "../theme.js";
 export default function KeyMoments({ minutes, watched, onMarkWatched }) {
   return (
     <Box sx={{ mt: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={1.25}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
         <Typography variant="h2">Key moments</Typography>
         <Box
           component="span"

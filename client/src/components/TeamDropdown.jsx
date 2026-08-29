@@ -149,12 +149,14 @@ export default function TeamDropdown({ id, value, options, onChange }) {
                 commitFreeText();
               }
             }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRoundedIcon sx={{ color: colors.accent, fontSize: 20 }} />
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRoundedIcon sx={{ color: colors.accent, fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              },
             }}
             sx={{
               "& .MuiOutlinedInput-root": {

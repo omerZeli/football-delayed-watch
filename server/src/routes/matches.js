@@ -55,6 +55,7 @@ async function respondWithMinutes(res, team, { essential = false } = {}) {
     team: result.team,
     match: {
       eventId: result.match.eventId,
+      date: result.match.date,
       home: result.match.home,
       away: result.match.away,
     },
