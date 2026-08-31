@@ -4,6 +4,7 @@ import Header from "./components/Header.jsx";
 import Controls from "./components/Controls.jsx";
 import Scoreboard from "./components/Scoreboard.jsx";
 import KeyMoments from "./components/KeyMoments.jsx";
+import TvSync from "./components/TvSync.jsx";
 import EmptyHint from "./components/EmptyHint.jsx";
 import { useMatchSearch } from "./hooks/useMatchSearch.js";
 import { TEAMS } from "./constants.js";
@@ -17,6 +18,8 @@ export default function App() {
     essentialOnly,
     watchedSet,
     showExtraTime,
+    nextUnwatchedMinute,
+    syncResetKey,
     toggleExtraTime,
     markWatchedUpTo,
     send,
@@ -52,13 +55,16 @@ export default function App() {
       {match && !error && <Scoreboard match={match} />}
 
       {result && !error && (
-        <KeyMoments
-          minutes={minutes}
-          watched={watchedSet}
-          onMarkWatched={markWatchedUpTo}
-          showExtraTime={showExtraTime}
-          onToggleExtraTime={toggleExtraTime}
-        />
+        <>
+          <KeyMoments
+            minutes={minutes}
+            watched={watchedSet}
+            onMarkWatched={markWatchedUpTo}
+            showExtraTime={showExtraTime}
+            onToggleExtraTime={toggleExtraTime}
+          />
+          <TvSync key={syncResetKey} nextMinute={nextUnwatchedMinute} />
+        </>
       )}
 
       {!result && !error && !loading && <EmptyHint />}

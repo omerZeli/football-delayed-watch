@@ -35,6 +35,9 @@ export function useMatchSearch() {
   // hidden and resets to hidden on every Send.
   const [showExtraTime, setShowExtraTime] = useState(false);
 
+  // Bumped on every Send so the TV-sync inputs remount and clear their values.
+  const [syncResetKey, setSyncResetKey] = useState(0);
+
   const eventId = result?.match?.eventId || null;
 
   // Watched minutes for the currently loaded match, loaded from storage
@@ -58,6 +61,19 @@ export function useMatchSearch() {
   }, [result]);
 
   const watchedSet = useMemo(() => new Set(watched), [watched]);
+
+  // The smallest unwatched minute (by base minute number, ignoring any "+"
+  // stoppage suffix), used by the TV-sync feature to point the user at the next
+  // moment they still need to watch. Null when everything is watched or the
+  // list is empty.
+  const nextUnwatchedMinute = useMemo(() => {
+    const minutes = result?.minutes || [];
+    const bases = minutes
+      .filter((m) => !watchedSet.has(m))
+      .map((m) => parseInt(String(m).split("+")[0], 10))
+      .filter((n) => Number.isFinite(n));
+    return bases.length ? Math.min(...bases) : null;
+  }, [result, watchedSet]);
 
   // Toggle watched state for the clicked minute. If it isn't watched yet, mark
   // it and every earlier minute (by position in the current chronological list)
@@ -103,6 +119,8 @@ export function useMatchSearch() {
 
   const send = useCallback(async () => {
     setShowExtraTime(false);
+    // Clear the TV-sync fields on a fresh fetch by remounting the input.
+    setSyncResetKey((k) => k + 1);
     const ok = await load(selectedTeam, essentialOnly);
     if (ok) setSearched(true);
   }, [load, selectedTeam, essentialOnly]);
@@ -132,6 +150,8 @@ export function useMatchSearch() {
     essentialOnly,
     watchedSet,
     showExtraTime,
+    nextUnwatchedMinute,
+    syncResetKey,
     toggleExtraTime: () => setShowExtraTime((v) => !v),
     markWatchedUpTo,
     send,
