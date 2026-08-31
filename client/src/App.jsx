@@ -6,7 +6,9 @@ import Scoreboard from "./components/Scoreboard.jsx";
 import KeyMoments from "./components/KeyMoments.jsx";
 import TvSync from "./components/TvSync.jsx";
 import EmptyHint from "./components/EmptyHint.jsx";
+import ServerWakingLoader from "./components/ServerWakingLoader.jsx";
 import { useMatchSearch } from "./hooks/useMatchSearch.js";
+import { useServerStatus } from "./hooks/useServerStatus.js";
 import { TEAMS } from "./constants.js";
 
 export default function App() {
@@ -27,12 +29,16 @@ export default function App() {
     toggleEssential,
   } = useMatchSearch();
 
+  const { status: serverStatus } = useServerStatus();
+
   const minutes = result?.minutes || [];
   const match = result?.match;
 
   return (
     <Box sx={{ position: "relative", maxWidth: 720, mx: "auto", px: 2.5, pt: 5, pb: 8 }}>
       <PitchBackground />
+
+      <ServerWakingLoader status={serverStatus} />
 
       <Header />
 

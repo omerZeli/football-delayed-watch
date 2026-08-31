@@ -1,6 +1,30 @@
 // API client for the matches endpoints.
 
 /**
+ * Probe the server's health endpoint once. Resolves true on a 200, false on
+ * any non-2xx, network error, or timeout. Uses AbortController so a hanging
+ * cold-start request doesn't stall forever; each call is self-contained so the
+ * caller can retry on its own schedule.
+ * @param {object} [options]
+ * @param {number} [options.timeoutMs=8000] abort the request after this long.
+ */
+export async function checkHealth({ timeoutMs = 8000 } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch("/health", {
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Shift a server-provided minute display value back by one minute.
  * For stoppage-time minutes ("45+2"), the stoppage part is decremented
  * ("45+2" -> "45+1"); for plain minutes ("45" -> "44") the base minute is
