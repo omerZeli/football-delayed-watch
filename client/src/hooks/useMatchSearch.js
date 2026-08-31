@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { fetchMinutes } from "../lib/api.js";
 import {
   loadStored,
@@ -35,8 +35,12 @@ export function useMatchSearch() {
   // hidden and resets to hidden on every Send.
   const [showExtraTime, setShowExtraTime] = useState(false);
 
-  // Bumped on every Send so the TV-sync inputs remount and clear their values.
+  // Bumped only when a Send targets a different team than the previous Send, so
+  // the TV-sync inputs remount and clear. Sending the same team again keeps the
+  // user's entered game minute / TV time.
   const [syncResetKey, setSyncResetKey] = useState(0);
+  // Team of the last Send, used to decide whether to reset the TV-sync fields.
+  const lastSyncedTeamRef = useRef(null);
 
   const eventId = result?.match?.eventId || null;
 
@@ -119,8 +123,12 @@ export function useMatchSearch() {
 
   const send = useCallback(async () => {
     setShowExtraTime(false);
-    // Clear the TV-sync fields on a fresh fetch by remounting the input.
-    setSyncResetKey((k) => k + 1);
+    // Only clear the TV-sync fields (by remounting the input) when the team
+    // changed since the last Send; re-sending the same team preserves them.
+    if (lastSyncedTeamRef.current !== selectedTeam) {
+      setSyncResetKey((k) => k + 1);
+      lastSyncedTeamRef.current = selectedTeam;
+    }
     const ok = await load(selectedTeam, essentialOnly);
     if (ok) setSearched(true);
   }, [load, selectedTeam, essentialOnly]);

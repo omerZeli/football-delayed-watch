@@ -4,38 +4,50 @@ import PlayCircleOutlineRoundedIcon from "@mui/icons-material/PlayCircleOutlineR
 import { colors } from "../theme.js";
 
 /**
- * Parse an "hh:mm" string into a total number of minutes. Returns null when the
- * value doesn't match the expected format. Hours/minutes may be one or two
- * digits; minutes must be 0-59.
+ * Parse an "hh:mm:ss" string into { minutes, seconds } where `minutes` is the
+ * total hh:mm expressed in whole minutes and `seconds` is the untouched tail.
+ * Returns null when the value doesn't match the expected format. Fields may be
+ * one or two digits; minutes and seconds must be 0-59.
+ *
+ * The seconds are kept separate on purpose: game minutes are whole minutes, so
+ * the sync math only ever adds/subtracts minutes and the seconds ride along
+ * unchanged (e.g. 01:30:35 + 10 min -> 01:40:35).
  */
 function parseTvTime(value) {
-  const m = String(value).trim().match(/^(\d{1,2}):(\d{1,2})$/);
+  const m = String(value).trim().match(/^(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
   if (!m) return null;
   const h = parseInt(m[1], 10);
   const min = parseInt(m[2], 10);
-  if (min > 59) return null;
-  return h * 60 + min;
+  const sec = parseInt(m[3], 10);
+  if (min > 59 || sec > 59) return null;
+  return { minutes: h * 60 + min, seconds: sec };
 }
 
 /**
- * Format raw keyboard input into an "hh:mm" mask as the user types. Non-digits
- * are dropped and the value is capped at 4 digits (hhmm). A colon is inserted
- * once a 3rd digit is present, and it naturally disappears when the user
- * deletes back to 2 digits. So "012" -> "01:2", "0120" -> "01:20", "01" -> "01".
+ * Format raw keyboard input into an "hh:mm:ss" mask as the user types.
+ * Non-digits are dropped and the value is capped at 6 digits (hhmmss). Colons
+ * are inserted once the 3rd and 5th digits are present, and they naturally
+ * disappear when the user deletes back. So "0120" -> "01:20", "012030" ->
+ * "01:20:30", "01" -> "01".
  */
 function maskTvTime(value) {
-  const digits = String(value).replace(/\D/g, "").slice(0, 4);
+  const digits = String(value).replace(/\D/g, "").slice(0, 6);
   if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4)}`;
 }
 
-/** Format a total number of minutes back into "hh:mm" (zero-padded). */
-function formatTvTime(totalMinutes) {
-  const clamped = Math.max(0, Math.round(totalMinutes));
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
+/**
+ * Format a total number of minutes plus a fixed seconds tail back into
+ * "hh:mm:ss" (zero-padded). The seconds pass through as-is.
+ */
+function formatTvTime(totalMinutes, seconds) {
+  const clampedMin = Math.max(0, Math.round(totalMinutes));
+  const h = Math.floor(clampedMin / 60);
+  const m = clampedMin % 60;
+  const s = Math.max(0, Math.min(59, seconds));
   const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(h)}:${pad(m)}`;
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
 /**
@@ -52,7 +64,7 @@ function formatTvTime(totalMinutes) {
 export default function TvSync({ nextMinute }) {
   const [refMinute, setRefMinute] = useState("");
   const [tvTime, setTvTime] = useState("");
-  // The reference committed on Enter: { ref, refMinutes }. The displayed result
+  // The reference committed on Enter: { ref, refMinutes, refSeconds }. The result
   // is derived from this + the live `nextMinute`, so marking/unmarking minutes
   // updates "Next up" without pressing Enter again.
   const [committed, setCommitted] = useState(null);
@@ -76,13 +88,13 @@ export default function TvSync({ nextMinute }) {
       return;
     }
 
-    const refMinutes = parseTvTime(tvTime);
-    if (refMinutes == null) {
-      setError("Enter a TV time as hh:mm (e.g. 01:20).");
+    const parsed = parseTvTime(tvTime);
+    if (parsed == null) {
+      setError("Enter a TV time as hh:mm:ss (e.g. 01:20:35).");
       return;
     }
 
-    setCommitted({ ref, refMinutes });
+    setCommitted({ ref, refMinutes: parsed.minutes, refSeconds: parsed.seconds });
   };
 
   // Recomputes whenever the committed reference or the next unwatched minute
@@ -100,7 +112,7 @@ export default function TvSync({ nextMinute }) {
     }
     const targetMinutes = committed.refMinutes + diff;
     if (targetMinutes < 0) return { invalid: true };
-    return { minute: nextMinute, time: formatTvTime(targetMinutes) };
+    return { minute: nextMinute, time: formatTvTime(targetMinutes, committed.refSeconds) };
   }, [committed, nextMinute]);
 
   return (
@@ -165,13 +177,13 @@ export default function TvSync({ nextMinute }) {
               color: "text.secondary",
             }}
           >
-            TV time (hh:mm)
+            TV time (hh:mm:ss)
           </InputLabel>
           <TextField
             id="tvsync-time"
             value={tvTime}
             onChange={(e) => setTvTime(maskTvTime(e.target.value))}
-            placeholder="01:20"
+            placeholder="01:20:35"
             size="small"
             autoComplete="off"
             slotProps={{ htmlInput: { inputMode: "numeric", autoComplete: "off" } }}
