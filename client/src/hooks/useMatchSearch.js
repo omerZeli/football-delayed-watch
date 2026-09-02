@@ -66,17 +66,27 @@ export function useMatchSearch() {
 
   const watchedSet = useMemo(() => new Set(watched), [watched]);
 
-  // The smallest unwatched minute (by base minute number, ignoring any "+"
-  // stoppage suffix), used by the TV-sync feature to point the user at the next
-  // moment they still need to watch. Null when everything is watched or the
-  // list is empty.
+  // The smallest unwatched minute, used by the TV-sync feature to point the
+  // user at the next moment they still need to watch. Stoppage time is added
+  // to the base (e.g. "90+3" counts as 93 minutes), so extra-time minutes are
+  // distinct playback points rather than collapsing onto their base minute.
+  // Returns { label, value } — the display label (e.g. "90+3") and its total
+  // minute value — or null when everything is watched or the list is empty.
   const nextUnwatchedMinute = useMemo(() => {
     const minutes = result?.minutes || [];
-    const bases = minutes
-      .filter((m) => !watchedSet.has(m))
-      .map((m) => parseInt(String(m).split("+")[0], 10))
-      .filter((n) => Number.isFinite(n));
-    return bases.length ? Math.min(...bases) : null;
+    let best = null;
+    for (const m of minutes) {
+      if (watchedSet.has(m)) continue;
+      const [basePart, extraPart] = String(m).split("+");
+      const base = parseInt(basePart, 10);
+      if (!Number.isFinite(base)) continue;
+      const extra = extraPart ? parseInt(extraPart, 10) || 0 : 0;
+      const value = base + extra;
+      if (best == null || value < best.value) {
+        best = { label: String(m), value };
+      }
+    }
+    return best;
   }, [result, watchedSet]);
 
   // Toggle watched state for the clicked minute. If it isn't watched yet, mark

@@ -58,8 +58,10 @@ function formatTvTime(totalMinutes, seconds) {
  * TV time. Everything runs locally on Enter, with no server call. The parent
  * remounts this component (via a key) after a Send so the fields reset.
  *
- * @param {number|null} nextMinute the smallest unwatched base minute, or null
- *   when there's nothing left to watch.
+ * @param {{label: string, value: number}|null} nextMinute the smallest
+ *   unwatched minute — `label` is what to display (e.g. "90+3") and `value` is
+ *   its total minute count (base + stoppage). Null when there's nothing left to
+ *   watch.
  */
 export default function TvSync({ nextMinute }) {
   const [refMinute, setRefMinute] = useState("");
@@ -104,15 +106,18 @@ export default function TvSync({ nextMinute }) {
     if (nextMinute == null) {
       return { done: true };
     }
-    const diff = nextMinute - committed.ref;
+    // Stoppage time counts toward the total: "90+3" is 93 minutes, so it sits
+    // 3 minutes past plain "90". The diff/target math uses that total value,
+    // while the label ("90+3") is what we show the user.
+    const diff = nextMinute.value - committed.ref;
     // No TV time: report the signed minute offset to the next minute instead.
     if (committed.refMinutes == null) {
       const sign = diff >= 0 ? "+" : "−";
-      return { minute: nextMinute, diff: `${sign}${Math.abs(diff)}` };
+      return { minute: nextMinute.label, diff: `${sign}${Math.abs(diff)}` };
     }
     const targetMinutes = committed.refMinutes + diff;
     if (targetMinutes < 0) return { invalid: true };
-    return { minute: nextMinute, time: formatTvTime(targetMinutes, committed.refSeconds) };
+    return { minute: nextMinute.label, time: formatTvTime(targetMinutes, committed.refSeconds) };
   }, [committed, nextMinute]);
 
   return (
@@ -200,12 +205,15 @@ export default function TvSync({ nextMinute }) {
         </Button>
       </Box>
 
-      {(error || result?.done || result?.invalid) && (
+      {(error || result?.invalid) && (
         <Typography sx={{ mt: 1.5, color: colors.danger, fontSize: "0.85rem" }}>
-          {error ||
-            (result?.done
-              ? "You've watched every minute — nothing left to sync."
-              : "That reference is later than the next minute — check your values.")}
+          {error || "That reference is later than the next minute — check your values."}
+        </Typography>
+      )}
+
+      {result?.done && (
+        <Typography color="text.secondary" sx={{ mt: 1.5, fontSize: "0.85rem" }}>
+          You've watched every minute — nothing left to sync.
         </Typography>
       )}
 
