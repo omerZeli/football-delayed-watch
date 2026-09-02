@@ -6,11 +6,10 @@ import { CircularProgress, Paper, Typography } from "@mui/material";
  * is awake, so it disappears the moment the server is confirmed up.
  *
  * @param {object} props
- * @param {"checking"|"awake"|"waking"} props.status
+ * @param {"awake"|"waking"} props.status
  */
 export default function ServerWakingLoader({ status }) {
-  // The initial probe ("checking") is quick; only surface the loader once we
-  // know the server is actually cold and waking.
+  // Visible by default while waking; hidden once the server is confirmed awake.
   if (status !== "waking") return null;
 
   return (
