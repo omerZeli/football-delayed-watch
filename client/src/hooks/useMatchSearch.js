@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { fetchMinutes } from "../lib/api.js";
+import { fetchMinutes, fetchPlayerEvents } from "../lib/api.js";
 import {
   loadStored,
   saveStored,
@@ -8,6 +8,8 @@ import {
   STORAGE_KEY,
   TEAM_KEY,
   ESSENTIAL_KEY,
+  PLAYER_KEY,
+  PLAYER_MODE_KEY,
 } from "../lib/storage.js";
 import { TEAMS } from "../constants.js";
 
@@ -34,6 +36,23 @@ export function useMatchSearch() {
   // Whether extra-time minutes (base minute > 90) are shown. Defaults to
   // hidden and resets to hidden on every Send.
   const [showExtraTime, setShowExtraTime] = useState(false);
+
+  // --- Player-events feature state -----------------------------------------
+  // Selected player (persisted). A player search reuses the SAME `result`,
+  // `loading` and `error` state as the team search, so player moments render
+  // through the identical "Key moments" UI (chips, watched tracking, TV-sync,
+  // extra-time toggle). `searchMode` just records which kind of search
+  // produced the current result, for labelling.
+  const [selectedPlayer, setSelectedPlayer] = useState(
+    () => loadStored(PLAYER_KEY) || ""
+  );
+  const [searchMode, setSearchMode] = useState("team"); // "team" | "player"
+  // Whether the user has switched the controls into "search by player" mode
+  // (checkbox on). When on, the player field replaces the highlight toggle and
+  // Send performs a player search instead of a team search.
+  const [playerMode, setPlayerMode] = useState(
+    () => Boolean(loadStored(PLAYER_MODE_KEY))
+  );
 
   // Bumped only when a Send targets a different team than the previous Send, so
   // the TV-sync inputs remount and clear. Sending the same team again keeps the
@@ -63,6 +82,14 @@ export function useMatchSearch() {
   useEffect(() => {
     if (result) saveStored(STORAGE_KEY, result);
   }, [result]);
+
+  useEffect(() => {
+    saveStored(PLAYER_KEY, selectedPlayer);
+  }, [selectedPlayer]);
+
+  useEffect(() => {
+    saveStored(PLAYER_MODE_KEY, playerMode);
+  }, [playerMode]);
 
   const watchedSet = useMemo(() => new Set(watched), [watched]);
 
@@ -131,33 +158,88 @@ export function useMatchSearch() {
     }
   }, []);
 
-  const send = useCallback(async () => {
-    setShowExtraTime(false);
-    // Only clear the TV-sync fields (by remounting the input) when the team
-    // changed since the last Send; re-sending the same team preserves them.
-    if (lastSyncedTeamRef.current !== selectedTeam) {
+  // Reset the TV-sync inputs (by remounting) whenever a Send targets a
+  // different "subject" than the previous one — a different team, or switching
+  // between team and player search — so stale game-minute/TV-time inputs clear.
+  const maybeResetSync = useCallback((subject) => {
+    if (lastSyncedTeamRef.current !== subject) {
       setSyncResetKey((k) => k + 1);
-      lastSyncedTeamRef.current = selectedTeam;
+      lastSyncedTeamRef.current = subject;
     }
+  }, []);
+
+  const runTeamSearch = useCallback(async () => {
+    setShowExtraTime(false);
+    maybeResetSync(`team:${selectedTeam}`);
+    setSearchMode("team");
     const ok = await load(selectedTeam, essentialOnly);
     if (ok) setSearched(true);
-  }, [load, selectedTeam, essentialOnly]);
+  }, [load, selectedTeam, essentialOnly, maybeResetSync]);
 
   // Changing the team clears the "already searched" flag so the essential-only
-  // toggle won't auto-refetch until the next successful Send.
+  // toggle won't auto-refetch until the next successful Send. It also clears
+  // the selected player, since suggested players are team-specific.
   const selectTeam = useCallback((team) => {
     setSelectedTeam(team);
     setSearched(false);
+    setSelectedPlayer("");
   }, []);
 
-  // Flip the essential-only mode. If a search has already run, immediately
-  // re-fetch with the new mode so the visible minutes update in place.
+  // Select a player (from the dropdown or free text).
+  const selectPlayer = useCallback((player) => {
+    setSelectedPlayer(player);
+  }, []);
+
+  // Toggle "search by player" mode (the checkbox). Turning it off doesn't
+  // clear the current result — the user can flip back and re-send.
+  const togglePlayerMode = useCallback((next) => {
+    setPlayerMode(Boolean(next));
+  }, []);
+
+  // Search a player: fetch the minutes the player was involved in and store
+  // them in the SAME `result` state a team search uses, so they render through
+  // the identical "Key moments" UI with all its features. Shares loading/error
+  // with the team search.
+  const runPlayerSearch = useCallback(async () => {
+    const team = selectedTeam?.trim();
+    const player = selectedPlayer?.trim();
+    if (!team || !player) return;
+    setShowExtraTime(false);
+    maybeResetSync(`player:${team}:${player}`);
+    setSearchMode("player");
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchPlayerEvents(team, player);
+      setResult(data);
+      setSearched(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedTeam, selectedPlayer, maybeResetSync]);
+
+  // The single Send action. In player mode it runs a player search; otherwise
+  // a team search. This lets one button serve both flows (the checkbox decides
+  // which), so there's no separate "Find player" button.
+  const send = useCallback(() => {
+    if (playerMode) return runPlayerSearch();
+    return runTeamSearch();
+  }, [playerMode, runPlayerSearch, runTeamSearch]);
+
+  // Flip the essential-only mode. Essential-only only applies to team
+  // searches; if a team search has already run, immediately re-fetch with the
+  // new mode so the visible minutes update in place. For a player search the
+  // toggle just records the preference for the next team search.
   const toggleEssential = useCallback(
     (next) => {
       setEssentialOnly(next);
-      if (searched) load(result?.query || selectedTeam, next);
+      if (searched && searchMode === "team") {
+        load(selectedTeam, next);
+      }
     },
-    [searched, load, result, selectedTeam]
+    [searched, searchMode, load, selectedTeam]
   );
 
   return {
@@ -170,10 +252,16 @@ export function useMatchSearch() {
     showExtraTime,
     nextUnwatchedMinute,
     syncResetKey,
+    searchMode,
     toggleExtraTime: () => setShowExtraTime((v) => !v),
     markWatchedUpTo,
     send,
     selectTeam,
     toggleEssential,
+    // Player-events feature.
+    selectedPlayer,
+    selectPlayer,
+    playerMode,
+    togglePlayerMode,
   };
 }

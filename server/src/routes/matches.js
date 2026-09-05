@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { getLastMatchEventsByTeamName } from "../services/matchService.js";
+import {
+  getLastMatchEventsByTeamName,
+  getPlayerEventsByTeamName,
+} from "../services/matchService.js";
 
 const router = Router();
 
@@ -111,6 +114,58 @@ router.get("/last/minutes/essential", async (req, res) => {
 
   try {
     return await respondWithMinutes(res, team, { essential: true });
+  } catch (err) {
+    return handleUpstreamError(res, err);
+  }
+});
+
+/**
+ * GET /api/matches/last/player-events?team=Arsenal&player=Bukayo%20Saka
+ * Returns every commentary line from the team's most recent match that
+ * mentions the given player, matched purely by name (case-insensitive
+ * substring) — not filtered by highlight keywords. Each event includes its
+ * minute, text, and highlight type (or null when it isn't a highlight).
+ */
+router.get("/last/player-events", async (req, res) => {
+  const team = (req.query.team || "").toString().trim();
+  const player = (req.query.player || "").toString().trim();
+
+  if (!team) {
+    return res.status(400).json({
+      error: "Missing required query parameter: team",
+    });
+  }
+
+  if (!player) {
+    return res.status(400).json({
+      error: "Missing required query parameter: player",
+    });
+  }
+
+  try {
+    const result = await getPlayerEventsByTeamName(team, player);
+
+    // Reduce the player's events to the distinct minutes they occurred at
+    // (chronological, de-duplicated), exactly like /last/minutes does for a
+    // team. This lets the client render player moments through the same
+    // "Key moments" UI (watched tracking, TV-sync, extra-time toggle).
+    const seen = new Set();
+    const minutes = [];
+    for (const ev of result.events) {
+      if (ev.minute && !seen.has(ev.minute)) {
+        seen.add(ev.minute);
+        minutes.push(ev.minute);
+      }
+    }
+
+    return res.status(200).json({
+      query: result.query,
+      team: result.team,
+      player: result.player,
+      match: result.match,
+      minutes,
+      events: result.events,
+    });
   } catch (err) {
     return handleUpstreamError(res, err);
   }

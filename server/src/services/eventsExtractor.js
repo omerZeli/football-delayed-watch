@@ -3,7 +3,7 @@
  * match metadata, score, the match highlights, and team stats.
  */
 
-import { extractHighlights } from "./highlightsExtractor.js";
+import { extractHighlights, classifyHighlight } from "./highlightsExtractor.js";
 
 // Which stats from the boxscore we surface alongside the commentary.
 const STAT_KEYS = [
@@ -80,6 +80,10 @@ function extractHeader(summary) {
  *   - highlights: the curated key moments (goals, subs, corners, cards, shots,
  *     blocks/saves, misses, VAR, attempts, and offensive-half free kicks),
  *     chronological. Derived by filtering the full commentary.
+ *   - commentary: the full minute-by-minute commentary in chronological order,
+ *     each line tagged with its highlight `type` (or null if it isn't a
+ *     highlight). Unlike `highlights`, nothing is dropped — this is what the
+ *     player-events feature matches player names against.
  *   - teamStats: aggregate stats (shots on target, corners, possession, etc.)
  */
 export function normalizeMatch(summary, { essential = false } = {}) {
@@ -88,6 +92,27 @@ export function normalizeMatch(summary, { essential = false } = {}) {
   return {
     ...header,
     highlights: extractHighlights(commentary, { essential }),
+    commentary: commentary.map((c) => ({
+      ...c,
+      type: classifyHighlight(c.text),
+    })),
     teamStats: extractTeamStats(summary.boxscore?.teams),
   };
+}
+
+/**
+ * Find every commentary line that mentions a given player, matched purely by
+ * name (case-insensitive substring) rather than by any highlight keyword. This
+ * returns everything the player was involved in — goals, fouls, offsides,
+ * subs, cards, and plain mentions — in chronological order.
+ *
+ * @param {Array<{sequence, minute, text, type}>} commentary - normalized,
+ *   chronological commentary (see normalizeMatch).
+ * @param {string} playerName - the player's name to look for.
+ * @returns {Array<{sequence, minute, text, type}>} matching commentary lines.
+ */
+export function extractPlayerEvents(commentary = [], playerName = "") {
+  const needle = playerName.trim().toLowerCase();
+  if (!needle) return [];
+  return commentary.filter((c) => c.text.toLowerCase().includes(needle));
 }

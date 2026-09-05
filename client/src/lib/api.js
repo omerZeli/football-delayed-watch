@@ -75,3 +75,28 @@ export async function fetchMinutes(team, { essential = false } = {}) {
   }
   return body;
 }
+
+/**
+ * Fetch the minutes at which a given player was involved in the team's most
+ * recent match. Player matching is done server-side by name only (not by
+ * highlight keyword), so this covers everything the player did.
+ *
+ * The result is shaped exactly like fetchMinutes ({ query, team, match,
+ * minutes }) — with the minutes shifted back by one the same way — so player
+ * moments can flow through the identical "Key moments" UI. The raw `events`
+ * (with descriptive text) are also included for anyone who wants them.
+ * @param {string} team - team name (dropdown value or free text).
+ * @param {string} player - player name (dropdown value or free text).
+ */
+export async function fetchPlayerEvents(team, player) {
+  const params = new URLSearchParams({ team, player });
+  const res = await fetch(`/api/matches/last/player-events?${params.toString()}`);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(body.error || `Request failed (${res.status})`);
+  }
+  if (Array.isArray(body.minutes)) {
+    body.minutes = body.minutes.map(shiftMinuteBackByOne);
+  }
+  return body;
+}

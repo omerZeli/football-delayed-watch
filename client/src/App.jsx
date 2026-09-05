@@ -9,7 +9,7 @@ import EmptyHint from "./components/EmptyHint.jsx";
 import ServerWakingLoader from "./components/ServerWakingLoader.jsx";
 import { useMatchSearch } from "./hooks/useMatchSearch.js";
 import { useServerStatus } from "./hooks/useServerStatus.js";
-import { TEAMS } from "./constants.js";
+import { TEAMS, playersForTeam } from "./constants.js";
 
 export default function App() {
   const {
@@ -22,17 +22,32 @@ export default function App() {
     showExtraTime,
     nextUnwatchedMinute,
     syncResetKey,
+    searchMode,
     toggleExtraTime,
     markWatchedUpTo,
     send,
     selectTeam,
     toggleEssential,
+    selectedPlayer,
+    selectPlayer,
+    playerMode,
+    togglePlayerMode,
   } = useMatchSearch();
 
   const { status: serverStatus } = useServerStatus();
 
   const minutes = result?.minutes || [];
   const match = result?.match;
+
+  // When the current result came from a player search, label the moments list
+  // for that player and adjust the empty-state copy accordingly.
+  const isPlayerResult = searchMode === "player";
+  const momentsTitle = isPlayerResult
+    ? `${result?.player || "Player"} moments`
+    : "Key moments";
+  const momentsEmptyText = isPlayerResult
+    ? `No moments found for ${result?.player || "this player"} in this match.`
+    : "No highlight minutes found for this match.";
 
   return (
     <Box sx={{ position: "relative", maxWidth: 720, mx: "auto", px: 2.5, pt: 5, pb: 8 }}>
@@ -50,6 +65,11 @@ export default function App() {
         onSelectTeam={selectTeam}
         onSend={send}
         onToggleEssential={toggleEssential}
+        selectedPlayer={selectedPlayer}
+        players={playersForTeam(selectedTeam)}
+        onSelectPlayer={selectPlayer}
+        playerMode={playerMode}
+        onTogglePlayerMode={togglePlayerMode}
       />
 
       {error && (
@@ -63,6 +83,8 @@ export default function App() {
       {result && !error && (
         <>
           <KeyMoments
+            title={momentsTitle}
+            emptyText={momentsEmptyText}
             minutes={minutes}
             watched={watchedSet}
             onMarkWatched={markWatchedUpTo}

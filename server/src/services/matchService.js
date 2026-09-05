@@ -4,7 +4,7 @@ import {
   getMatchSummary,
   findLastMatchViaScoreboard,
 } from "./espnClient.js";
-import { normalizeMatch } from "./eventsExtractor.js";
+import { normalizeMatch, extractPlayerEvents } from "./eventsExtractor.js";
 
 /**
  * Resolve the best-matching team for a free-text name.
@@ -120,5 +120,37 @@ export async function getLastMatchEventsByTeamName(teamName, { essential = false
       logo: team.logo,
     },
     match,
+  };
+}
+
+/**
+ * Full pipeline for the player-events feature: team name -> resolved team ->
+ * last started match -> every commentary line that mentions the given player,
+ * matched by name only (not by highlight keyword). Reuses the same match
+ * resolution as getLastMatchEventsByTeamName so a team's most recent live or
+ * completed game is used.
+ *
+ * @param {string} teamName - free-text team name (dropdown value or typed).
+ * @param {string} playerName - free-text player name to search commentary for.
+ * @returns {Promise<{ query, team, player, match }>} where match contains the
+ *   match metadata plus `events`: the chronological commentary lines naming
+ *   the player, each tagged with its highlight `type` (or null).
+ * @throws typed errors (.code) mapped to HTTP status by the route.
+ */
+export async function getPlayerEventsByTeamName(teamName, playerName) {
+  const result = await getLastMatchEventsByTeamName(teamName);
+  const events = extractPlayerEvents(result.match.commentary, playerName);
+
+  return {
+    query: { team: teamName, player: playerName },
+    team: result.team,
+    player: playerName,
+    match: {
+      eventId: result.match.eventId,
+      date: result.match.date,
+      home: result.match.home,
+      away: result.match.away,
+    },
+    events,
   };
 }

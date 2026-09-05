@@ -1,6 +1,10 @@
 // Small localStorage helpers with JSON (de)serialization and safe fallback.
 export const STORAGE_KEY = "fdw:lastResult";
 export const TEAM_KEY = "fdw:lastTeam";
+// Last selected player for the player-events feature.
+export const PLAYER_KEY = "fdw:lastPlayer";
+// Whether "search by player" mode is enabled (boolean).
+export const PLAYER_MODE_KEY = "fdw:playerMode";
 // Whether the user opted into essential-only highlights (boolean).
 export const ESSENTIAL_KEY = "fdw:essentialOnly";
 // Watched minutes, keyed per match: { [eventId]: ["1'", "15'", ...] }.

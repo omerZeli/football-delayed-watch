@@ -28,6 +28,8 @@ export default function KeyMoments({
   onMarkWatched,
   showExtraTime = false,
   onToggleExtraTime,
+  title = "Key moments",
+  emptyText = "No highlight minutes found for this match.",
 }) {
   const watchedCount = minutes.filter((m) => watched?.has(m)).length;
   const extraTimeCount = minutes.filter(isExtraTime).length;
@@ -46,7 +48,7 @@ export default function KeyMoments({
         }}
       >
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-          <Typography variant="h2">Key moments</Typography>
+          <Typography variant="h2">{title}</Typography>
           <Box
             component="span"
             sx={{
@@ -134,7 +136,7 @@ export default function KeyMoments({
         </>
       ) : (
         <Typography color="text.secondary" sx={{ mt: 1 }}>
-          No highlight minutes found for this match.
+          {emptyText}
         </Typography>
       )}
     </Box>
