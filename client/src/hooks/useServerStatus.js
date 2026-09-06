@@ -13,7 +13,7 @@ const WAKE_POLL_INTERVAL_MS = 5_000;
  * loader during cold starts.
  *
  * The loader shows by default from first render (status starts as "waking").
- * On mount the client probes /health once. That request also nudges the
+ * On mount the client probes /api/ping once. That request also nudges the
  * sleeping service to start:
  *   - responds quickly  -> status "awake", loader hides.
  *   - fails/times out    -> stays "waking"; we wait out the cold start and

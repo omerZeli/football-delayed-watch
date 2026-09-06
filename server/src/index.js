@@ -9,8 +9,12 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Health check route
-app.get("/health", (req, res) => {
+// Liveness/readiness check. Named "/api/ping" rather than "/health" because
+// ad blockers and privacy extensions block many common paths (/health,
+// /track, /ads...) with ERR_BLOCKED_BY_CLIENT before the request leaves the
+// browser. Keeping it under /api/ also keeps the SPA fallback from shadowing
+// it.
+app.get("/api/ping", (req, res) => {
   res.status(200).json({
     status: "ok",
     uptime: process.uptime(),

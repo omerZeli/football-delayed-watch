@@ -1,7 +1,8 @@
 // API client for the matches endpoints.
 
 /**
- * Probe the server's health endpoint once. Resolves true on a 200, false on
+ * Probe the server's liveness endpoint (/api/ping) once. Resolves true on a
+ * 200, false on
  * any non-2xx, network error, or timeout. Uses AbortController so a hanging
  * cold-start request doesn't stall forever; each call is self-contained so the
  * caller can retry on its own schedule.
@@ -12,7 +13,7 @@ export async function checkHealth({ timeoutMs = 8000 } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch("/health", {
+    const res = await fetch("/api/ping", {
       signal: controller.signal,
       cache: "no-store",
     });

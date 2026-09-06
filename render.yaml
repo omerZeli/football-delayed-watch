@@ -15,7 +15,7 @@ services:
     # Start the Express server, which also serves client/dist.
     startCommand: npm start
     # Render sets PORT automatically; the server reads process.env.PORT.
-    healthCheckPath: /health
+    healthCheckPath: /api/ping
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
