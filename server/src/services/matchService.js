@@ -64,6 +64,28 @@ export function findLastStartedMatch(events) {
   return started.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 }
 
+// Continental club competitions that a team's domestic-league schedule/
+// scoreboard won't surface (ESPN scopes both by competition slug). Big clubs
+// regularly have their most recent - or currently live - match be one of
+// these rather than a domestic league fixture, so we scan them too.
+const CONTINENTAL_CUP_LEAGUES = [
+  "uefa.champions",
+  "uefa.europa",
+  "uefa.europa.conf",
+];
+
+/**
+ * Pick the best of two candidate matches (possibly null), each optionally
+ * tagged with the league it was found in. A live match always wins; between
+ * two non-live (or two live) candidates, the most recent kickoff wins.
+ */
+function pickBetterMatch(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  if (a.live !== b.live) return a.live ? a : b;
+  return new Date(a.date) >= new Date(b.date) ? a : b;
+}
+
 /**
  * Full pipeline: team name -> resolved team -> last completed match -> normalized events.
  * Throws typed errors (with .code) so the route can map them to HTTP status codes.
@@ -80,6 +102,7 @@ export async function getLastMatchEventsByTeamName(teamName, { essential = false
 
   const schedule = await getTeamSchedule(team.league, team.id);
   let lastMatch = findLastStartedMatch(schedule);
+  if (lastMatch) lastMatch = { ...lastMatch, league: team.league };
 
   // The team schedule feed lags: an in-progress match often isn't listed
   // there yet (or the feed is empty at season boundaries), so on its own it
@@ -96,8 +119,27 @@ export async function getLastMatchEventsByTeamName(teamName, { essential = false
       team.id
     );
     if (scoreboardMatch && (scoreboardMatch.live || !lastMatch)) {
-      lastMatch = scoreboardMatch;
+      lastMatch = { ...scoreboardMatch, league: team.league };
     }
+  }
+
+  // A team's domestic league/schedule never includes continental cup
+  // fixtures (Champions League, Europa League, Conference League): ESPN
+  // scopes those under their own league slugs entirely. Scan them too, so a
+  // currently-live or more recent cup match isn't shadowed by a stale
+  // domestic result (e.g. last weekend's league game).
+  const cupMatches = await Promise.all(
+    CONTINENTAL_CUP_LEAGUES.map(async (league) => {
+      try {
+        const match = await findLastMatchViaScoreboard(league, team.id, 30);
+        return match ? { ...match, league } : null;
+      } catch {
+        return null; // a cup the team isn't in, or a transient failure
+      }
+    })
+  );
+  for (const cupMatch of cupMatches) {
+    lastMatch = pickBetterMatch(lastMatch, cupMatch);
   }
 
   if (!lastMatch) {
@@ -108,7 +150,7 @@ export async function getLastMatchEventsByTeamName(teamName, { essential = false
     throw err;
   }
 
-  const summary = await getMatchSummary(team.league, lastMatch.eventId);
+  const summary = await getMatchSummary(lastMatch.league, lastMatch.eventId);
   const match = normalizeMatch(summary, { essential });
 
   return {
