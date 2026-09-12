@@ -104,22 +104,26 @@ export async function getLastMatchEventsByTeamName(teamName, { essential = false
   let lastMatch = findLastStartedMatch(schedule);
   if (lastMatch) lastMatch = { ...lastMatch, league: team.league };
 
-  // The team schedule feed lags: an in-progress match often isn't listed
-  // there yet (or the feed is empty at season boundaries), so on its own it
-  // can point at a stale, already-completed game while a newer one is live.
-  // The league scoreboard, by contrast, reflects live matches immediately.
+  // The team schedule feed lags: an in-progress or just-finished match often
+  // isn't listed there yet (or the feed is empty at season boundaries), so on
+  // its own it can point at a stale, already-completed game while a newer
+  // one is live or has just ended. The league scoreboard, by contrast,
+  // reflects both live and just-finished matches immediately.
   //
   // Scan the scoreboard (today first, then backwards) and prefer its result
-  // whenever it finds a live match, or whenever the schedule gave us nothing.
-  // Only fall back to the schedule's completed match when the scoreboard has
-  // no live game to offer.
+  // whenever it's more recent than (or as live as) what the schedule gave us
+  // - not just when it's live - so a stale schedule entry can never shadow a
+  // scoreboard match that has since kicked off or finished more recently.
   if (!lastMatch || !lastMatch.live) {
     const scoreboardMatch = await findLastMatchViaScoreboard(
       team.league,
       team.id
     );
-    if (scoreboardMatch && (scoreboardMatch.live || !lastMatch)) {
-      lastMatch = { ...scoreboardMatch, league: team.league };
+    if (scoreboardMatch) {
+      lastMatch = pickBetterMatch(lastMatch, {
+        ...scoreboardMatch,
+        league: team.league,
+      });
     }
   }
 
